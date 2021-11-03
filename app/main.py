@@ -1,28 +1,21 @@
-from typing import Optional
+from typing import Optional, List
 from fastapi import FastAPI, Response, status, HTTPException, Depends
 from fastapi.params import Body
-from pydantic import BaseModel
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import time
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.sqltypes import TIMESTAMP
-from . import models
+from starlette.status import HTTP_201_CREATED
+from . import models, schemas, utils
 from .database import engine, get_db
+
 
 
 # this should create our tables when we run our app
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
-
-
-# create class to keep a pydantic model of a Post and what it should have
-class Post(BaseModel):
-    title: str
-    content: str
-    published: bool = True  # when not sent in the body of req, it will default to True
-    
 
 
 # run until we get a successful connection
@@ -46,22 +39,18 @@ while True:
 def root():
     return {"message": "API Scene is ON!"}
 
-# test route
-# @app.get("/sqlalchemy")
-# def test_posts(db: Session = Depends(get_db)):
-#     return {"status":"success"}
-
+# ------------ POSTS ROUTES ----------------
 
 #  get all posts
-@app.get("/posts")
+@app.get("/posts", response_model=List[schemas.Post])   # imported List from Optional since we are returning a list of Post objects
 def get_posts(db: Session = Depends(get_db)):
     posts = db.query(models.Post).all()
-    return {"data": posts}
+    return posts
 
 
 # add new post
-@app.post("/posts", status_code=status.HTTP_201_CREATED)
-def create_posts(post: Post, db: Session = Depends(get_db)):
+@app.post("/posts", status_code=status.HTTP_201_CREATED, response_model=schemas.Post)
+def create_posts(post: schemas.PostCreate, db: Session = Depends(get_db)):
     # new_post = models.Post(title=post.title, content=post.content, published=post.published)
     # print(**post.dict())
     new_post = models.Post(**post.dict())
@@ -70,18 +59,18 @@ def create_posts(post: Post, db: Session = Depends(get_db)):
     db.commit()
     # retrieve the new post we just created
     db.refresh(new_post)
-    return {"data": new_post}
+    return new_post
 
 
 # get a post by id
-@app.get("/posts/{id}")
+@app.get("/posts/{id}", response_model=schemas.Post)
 def get_post(id: int, db: Session = Depends(get_db)):
     post = db.query(models.Post).filter(models.Post.id == id).first()
     if not post:
         # res.status_code = status.HTTP_404_NOT_FOUND
         # return {"message": f"post with id: {id} was not found!"}
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"post with id: {id} was not found!")
-    return {"data": post}
+    return post
 
 
 # delete a post by id
@@ -100,8 +89,8 @@ def delete_post(id: int, db: Session = Depends(get_db)):
 
 
 # update a post by id
-@app.put("/posts/{id}")
-def updatePost(id: int, post: Post, db: Session = Depends(get_db)):
+@app.put("/posts/{id}", response_model=schemas.Post)
+def updatePost(id: int, post: schemas.PostCreate, db: Session = Depends(get_db)):
     # cursor.execute("""UPDATE posts SET title = %s, content = %s, published = %s WHERE id = %s RETURNING *""", (post.title, post.content, post.published, str(id)))
     # updated_post = cursor.fetchone()
     # conn.commit()
@@ -114,4 +103,23 @@ def updatePost(id: int, post: Post, db: Session = Depends(get_db)):
     update_query.update(post.dict(), synchronize_session=False)
     db.commit()
 
-    return {"data": update_query.first()}
+    return update_query.first()
+
+
+
+# ------------ USERS ROUTES -----------------
+
+# add new user
+@app.post("/users", status_code=HTTP_201_CREATED, response_model=schemas.UserOut)
+def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    # hash the pass
+    hashed_pass = utils.hash_password(user.password)
+    user.password = hashed_pass
+
+    new_user = models.User(**user.dict())
+    # add to db
+    db.add(new_user)
+    db.commit()
+    # retrieve the new post we just created
+    db.refresh(new_user)
+    return new_user
