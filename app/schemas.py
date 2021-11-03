@@ -37,12 +37,13 @@ class Post(PostBase):
         orm_mode = True
 
 
-# class for users
+# schema for users
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
     name: str
 
+# response schema for /users api
 class UserOut(BaseModel):
     id: int
     email: EmailStr
