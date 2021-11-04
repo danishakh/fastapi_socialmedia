@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 from pydantic import BaseModel, EmailStr
 
 from app.database import Base
@@ -52,3 +53,19 @@ class UserOut(BaseModel):
     # extra config for pydantic models to convert the sqlalchemy model to a pydantic model
     class Config:
         orm_mode = True
+
+
+# schema used to send /login request
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+# schema used to verify our user is still logged in - using JWT
+# token will be sent alongside requests by user for protected resources
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+# schema for the data embedded into our access token
+class TokenData(BaseModel):
+    id: Optional[str]

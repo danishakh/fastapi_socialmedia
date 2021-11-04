@@ -1,3 +1,4 @@
+from sys import addaudithook
 from typing import Optional, List
 from fastapi import FastAPI, Response, status, HTTPException, Depends
 from fastapi.params import Body
@@ -8,7 +9,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql.sqltypes import TIMESTAMP
 from . import models, schemas, utils
 from .database import engine, get_db
-from .routers import user, post
+from .routers import user, post, auth
 
 
 
@@ -37,6 +38,7 @@ while True:
 # this is how we setup our fastAPI router
 app.include_router(post.router)
 app.include_router(user.router)
+app.include_router(auth.router)
 
 
 # decorator that turns the function to a path operation for fastAPI
