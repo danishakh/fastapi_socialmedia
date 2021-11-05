@@ -33,6 +33,7 @@ class Post(PostBase):
     # only need to specify the new columns since others are inherited from PostBase
     id: int
     created_at: datetime
+    user_id: int
     # extra config for pydantic models to convert the sqlalchemy model to a pydantic model
     class Config:
         orm_mode = True

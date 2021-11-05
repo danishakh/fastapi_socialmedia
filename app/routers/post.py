@@ -1,3 +1,4 @@
+from os import stat
 from fastapi import FastAPI, Response, status, HTTPException, Depends, APIRouter
 from sqlalchemy.orm import Session
 from typing import Optional, List
@@ -21,7 +22,8 @@ def get_posts(db: Session = Depends(get_db)):
 # add new post
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=schemas.Post)
 def create_posts(post: schemas.PostCreate, db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
-    new_post = models.Post(**post.dict())
+    # add the foreign key (user_id) of the current logged in user
+    new_post = models.Post(user_id=current_user.id, **post.dict())
     # add to db
     db.add(new_post)
     db.commit()
@@ -44,13 +46,16 @@ def get_post(id: int, db: Session = Depends(get_db)):
 # delete a post by id
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_post(id: int, db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
-    post = db.query(models.Post).filter(models.Post.id == id)
-
-    if post.first() == None:
+    post_query = db.query(models.Post).filter(models.Post.id == id)
+    post = post_query.first()
+    # if post does not exist
+    if post == None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"post with id: {id} does not exist!")
-
+    # if post is not current_user's post
+    if post.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to perform requested action")
     # synchronize_session=False is some default config, just got it from documentation
-    post.delete(synchronize_session=False)
+    post_query.delete(synchronize_session=False)
     db.commit()
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -67,7 +72,9 @@ def updatePost(id: int, post: schemas.PostCreate, db: Session = Depends(get_db),
 
     if updated_post == None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"post with id: {id} does not exist!")
-
+    # if post is not current_user's post
+    if updated_post.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to perform requested action")
     update_query.update(post.dict(), synchronize_session=False)
     db.commit()
 
