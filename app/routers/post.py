@@ -14,14 +14,14 @@ router = APIRouter(
 
 #  get all posts
 @router.get("/", response_model=List[schemas.Post])   # imported List from Optional since we are returning a list of Post objects
-def get_posts(db: Session = Depends(get_db)):
-    posts = db.query(models.Post).all()
+def get_posts(db: Session = Depends(get_db), limit: int = 10, skip: int = 0, search: Optional[str] = ''):
+    posts = db.query(models.Post).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all()
     return posts
 
 
 # add new post
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=schemas.Post)
-def create_posts(post: schemas.PostCreate, db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
+def create_posts(post: schemas.PostCreate, db: Session = Depends(get_db), current_user: dict = Depends(oauth2.get_current_user)):
     # add the foreign key (user_id) of the current logged in user
     new_post = models.Post(user_id=current_user.id, **post.dict())
     # add to db
@@ -45,7 +45,7 @@ def get_post(id: int, db: Session = Depends(get_db)):
 
 # delete a post by id
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_post(id: int, db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
+def delete_post(id: int, db: Session = Depends(get_db), current_user: dict = Depends(oauth2.get_current_user)):
     post_query = db.query(models.Post).filter(models.Post.id == id)
     post = post_query.first()
     # if post does not exist
@@ -63,7 +63,7 @@ def delete_post(id: int, db: Session = Depends(get_db), current_user: int = Depe
 
 # update a post by id
 @router.put("/{id}", response_model=schemas.Post)
-def updatePost(id: int, post: schemas.PostCreate, db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
+def updatePost(id: int, post: schemas.PostCreate, db: Session = Depends(get_db), current_user: dict = Depends(oauth2.get_current_user)):
     # cursor.execute("""UPDATE posts SET title = %s, content = %s, published = %s WHERE id = %s RETURNING *""", (post.title, post.content, post.published, str(id)))
     # updated_post = cursor.fetchone()
     # conn.commit()

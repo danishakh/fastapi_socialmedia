@@ -1,5 +1,6 @@
 from pydantic.errors import ColorError
-from sqlalchemy.sql.expression import null
+from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql.sqltypes import TIMESTAMP
 from .database import Base
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
@@ -16,7 +17,8 @@ class Post(Base):
     published = Column(Boolean, server_default='True', nullable=False)
     created_at = Column(TIMESTAMP(timezone=True), server_default=text('now()') ,nullable=False)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-
+    
+    user = relationship("User")
 
 
 class User(Base):
