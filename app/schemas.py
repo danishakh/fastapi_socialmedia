@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, EmailStr
+from pydantic.types import conint
 
 from app.database import Base
 from app.models import User
@@ -63,3 +64,8 @@ class Token(BaseModel):
 # schema for the data embedded into our access token
 class TokenData(BaseModel):
     id: Optional[str]
+
+
+class Like(BaseModel):
+    post_id: int
+    dir: conint(le=1)   # this will restrict the passed in values to be <= 1 (includes -ve numbers but dont know yet how to overcome that validation here)
