@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from . import models
 from .database import engine
 from .routers import user, post, auth, like
@@ -9,6 +10,17 @@ from .routers import user, post, auth, like
 # models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+
+origins = ['*']
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,   # which domains should be able to talk to our api
+    allow_credentials=True,  
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 
 # this is how we setup our fastAPI router
