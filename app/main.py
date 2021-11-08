@@ -5,7 +5,8 @@ from .routers import user, post, auth, like
 
 
 # this should create our tables when we run our app
-models.Base.metadata.create_all(bind=engine)
+# after alembic setup - we do not need this anymore as alembic will be in charge of creating all our tables based on our models
+# models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 

@@ -54,6 +54,13 @@ class Post(PostBase):
     class Config:
         orm_mode = True
 
+# creating this to include likes for each post
+class PostOut(BaseModel):
+    Post: Post
+    likes: int
+
+    class Config:
+        orm_mode = True
 
 # schema used to verify our user is still logged in - using JWT
 # token will be sent alongside requests by user for protected resources

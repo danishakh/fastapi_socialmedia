@@ -2,6 +2,8 @@ from os import stat
 from fastapi import FastAPI, Response, status, HTTPException, Depends, APIRouter
 from sqlalchemy.orm import Session
 from typing import Optional, List
+
+from sqlalchemy.sql.functions import func
 from .. import models, schemas, oauth2
 from ..database import get_db
 
@@ -13,9 +15,14 @@ router = APIRouter(
 # ------------ POSTS ROUTES ----------------
 
 #  get all posts
-@router.get("/", response_model=List[schemas.Post])   # imported List from Optional since we are returning a list of Post objects
+# @router.get("/", response_model=List[schemas.Post])   # imported List from Optional since we are returning a list of Post objects
+@router.get("/", response_model=List[schemas.PostOut])
 def get_posts(db: Session = Depends(get_db), limit: int = 10, skip: int = 0, search: Optional[str] = ''):
-    posts = db.query(models.Post).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all()
+    # posts = db.query(models.Post).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all()
+
+    # including likes in the response too now!
+    # SELECT posts.*, COUNT(likes.post_id) AS likes FROM posts LEFT JOIN likes ON posts.id = likes.post_id GROUP BY posts.id;
+    posts = db.query(models.Post, func.count(models.Like.post_id).label("likes")).join(models.Like, models.Post.id == models.Like.post_id, isouter=True).group_by(models.Post.id).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all()
     return posts
 
 
@@ -33,9 +40,12 @@ def create_posts(post: schemas.PostCreate, db: Session = Depends(get_db), curren
 
 
 # get a post by id
-@router.get("/{id}", response_model=schemas.Post)
+# @router.get("/{id}", response_model=schemas.Post)
+@router.get("/{id}", response_model=schemas.PostOut)
 def get_post(id: int, db: Session = Depends(get_db)):
-    post = db.query(models.Post).filter(models.Post.id == id).first()
+    # post = db.query(models.Post).filter(models.Post.id == id).first()
+    # including likes in the response
+    post = db.query(models.Post, func.count(models.Like.post_id).label("likes")).join(models.Like, models.Post.id == models.Like.post_id, isouter=True).group_by(models.Post.id).filter(models.Post.id == id).first()
     if not post:
         # res.status_code = status.HTTP_404_NOT_FOUND
         # return {"message": f"post with id: {id} was not found!"}
